@@ -1,35 +1,33 @@
-#Библиотека для работы с измерительным контроллером КИ-2.3
-#На основе протокола обмена ver 0.7
-#URL: http://www.prompribor-kaluga.ru/upload/support/protocols/protokol%20obmena%20KI%202_3.pdf
+# Библиотека для работы с измерительным контроллером КИ-2.3
+# На основе протокола обмена ver 0.7
+# URL: http://www.prompribor-kaluga.ru/upload/support/protocols/protokol%20obmena%20KI%202_3.pdf
 
 import binascii
 import time
 import serial
 import sys
 
-#Настройка порта для GNU/Linux
-ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1, rtscts=False, dsrdtr=True)
+# Настройка порта для GNU/Linux
+# ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1, rtscts=False, dsrdtr=True)
 
 
-#Команда остановки режима и получения окончательных результатов измерения
-#Возвращает кортеж данных:
-#режим, байт-состояния, время измерения, такты измерения, импульсы с Входа2(МФ)
+# Команда остановки режима и получения окончательных результатов измерения
+# Возвращает кортеж данных:
+# режим, байт-состояния, время измерения, такты измерения, импульсы с Входа2(МФ)
 
 
-def GetAndRest():
+def getandrest():   # Команда SpprCmdGetAndReset
     ser.write(b'\xFE')     
     #print(data, type(data))
     data = memoryview(ser.readline())
     print(data, type(data))
     for i in data:
         print(i, type(i))
-    bite0 = int.from_bytes(bytes(data[0]), byteorder='little')       #режим
-    bite1 = binascii.hexlify(bytes(data[1])).decode('ASCII')         #байт-состояния
+    bite0 = int.from_bytes(bytes(data[0]), byteorder='little')       # режим
+    bite1 = binascii.hexlify(bytes(data[1])).decode('ASCII')         # байт-состояния
     bite24 = int.from_bytes(data[2:5], byteorder='little')
-    time1 = bite24/4096
-    string = (format(time1, '6.2f').replace('.', ',')) + ' '  #ВРЕМЯ
-    bite57 = int.from_bytes(data[5:8], byteorder='little')    #Импульсы тактов
-    bite810 =int.from_bytes(data[8:11], byteorder='little')   #импульсы с Входа2(МФ)
+    bite57 = int.from_bytes(data[5:8], byteorder='little')    # Импульсы тактов
+    bite810 = int.from_bytes(data[8:11], byteorder='little')   # импульсы с Входа2(МФ)
     bite1113 = int.from_bytes(data[11:14], byteorder='little')
     bite1416 = int.from_bytes(data[16:17], byteorder='little')
     bite1719 = int.from_bytes(data[17:20], byteorder='little')
@@ -37,46 +35,60 @@ def GetAndRest():
     bite2325 = int.from_bytes(data[23:25], byteorder='little')
     bite2628 = int.from_bytes(data[25:28], byteorder='little')
     bite29 = int.from_bytes(bytes(data[28]), byteorder='little')
+    message = (bite0, bite1, bite24, bite57, bite810, bite1113, bite1416, bite1719, bite2022, bite2325, bite2628, bite29)
+    return message
+
+def test():
+    bite0 = 111
+    bite1 = 222
+    bite24 = 333
+    bite57 = 444
+    bite810 = 555
+    bite1113 = 666
+    bite1416 = 777
+    bite1719 = 888
+    bite2022 = 999
+    bite2325 = 101010
+    bite2628 = 111111
+    bite29 = 121212
+    message = (bite0, bite1, bite24, bite57, bite810, bite1113, bite1416, bite1719, bite2022, bite2325, bite2628, bite29)
+    return message
 
 
-    if time1 == 0: time1=0.001    
-    F=bite810/time1
-    FMAX=1000    
-    GMAX=3.75
-    G=F*GMAX/FMAX
-    V=G/3.6*time1
-    G1=V/time1*3.6
-    string += (format(G1, '6.4f').replace('.', ',')) + ' '   #РАСХОД
-    string += (format(V, '6.4f').replace('.', ',')) + ' '   #ОБЪЕМ
-    return string
+def calculate(array):
+    time1 = array[2] / 4096
+    if time1 == 0:
+        time1 = 0.001
+    F = array[4]/time1
+    FMAX = 1000
+    GMAX = 3.75
+    G = F * GMAX / FMAX
+    V = G / 3.6 * time1
+    G1 = V / time1 * 3.6
+    message = []
+    message[0] = (format(G1, '6.4f').replace('.', ','))  # РАСХОД
+    message[1] = (format(V, '6.4f').replace('.', ','))   # ОБЪЕМ
+    message[2] = (format(time1, '6.2f').replace('.', ',')) # ВРЕМЯ
+    return message
 
 
-def Get():
+def get():    # команда SpprCmdGet
     ser.write(b'\xFD')         
     data = ser.readline()    
-    bite0 = int.from_bytes(bytes(data[0]), byteorder='little')       #режим
-    bite1 = binascii.hexlify(bytes(data[1])).decode('ASCII')         #байт-состояния
+    bite0 = int.from_bytes(bytes(data[0]), byteorder='little')       # режим
+    bite1 = binascii.hexlify(bytes(data[1])).decode('ASCII')         # байт-состояния
     bite2_4 = int.from_bytes(data[2:5], byteorder='little')
-    time1 = bite2_4/4096
-    string = (format(time1, '6.2f').replace('.', ',')) + ' '  #ВРЕМЯ
-    bite5_7 = int.from_bytes(data[5:8], byteorder='little')    #Импульсы тактов
-    bite8_10 =int.from_bytes(data[8:11], byteorder='little')   #импульсы с Входа2(МФ)
+    bite5_7 = int.from_bytes(data[5:8], byteorder='little')    # Импульсы тактов
+    bite8_10 = int.from_bytes(data[8:11], byteorder='little')   # импульсы с Входа2(МФ)
     bite11_13 = int.from_bytes(data[11:14], byteorder='little')
+    bite14_16 = int.from_bytes(data[11:14], byteorder='little')
     bite17_19 = int.from_bytes(data[17:20], byteorder='little')
     bite20_22 = int.from_bytes(data[20:23], byteorder='little')
     bite23_25 = int.from_bytes(data[23:26], byteorder='little')
     bite26_28 = int.from_bytes(data[26:29], byteorder='little')
     bite29 = int.from_bytes(bytes(data[29]), byteorder='little')
-    if time1 == 0: time1=0.001    
-    F=bite8_10/time1
-    FMAX=1000    
-    GMAX=3.75
-    G=F*GMAX/FMAX
-    V=G/3.6*time1
-    G1=V/time1*3.6
-    string += (format(G1, '6.4f').replace('.', ',')) + ' '   #РАСХОД
-    string += (format(V, '6.4f').replace('.', ',')) + ' '   #ОБЪЕМ
-    return string
+    message = (bite0, bite1, bite2_4, bite5_7, bite8_10, bite11_13, bite14_16, bite17_19, bite20_22, bite23_25, bite26_28, bite29)
+    return message
 
 def SpprCmdTMeasure(time):
     """Измерение импульсов по времени, (Время в секундах)"""
@@ -133,13 +145,14 @@ def SpprCmdNMeasure(pulse, chanel):
     data = ser.readline()
     if data == message:
         string = ('Измерение импульсов, в течении ', pulse, ' импульсов.')
-    else: string = ('Произошла SpprCmdSS2Measure()ошибка!', data)
+    else:
+        string = ('Произошла ошибка!', data)
     return string
 
 
 def SpprCmdSendTest():
     """Генерация импульсов"""
-    pass #Не реализовано
+    pass  #Не реализовано
 
 
 def SpprCmdLaserOn():
@@ -148,8 +161,9 @@ def SpprCmdLaserOn():
     ser.write(message)
     data = ser.readline()
     if data == message:
-        string = ('Лазеры включены')
-    else: string = ('Произошла ошибка!')
+        string = str('Лазеры включены')
+    else:
+        string = str('Произошла ошибка!')
     return string
 
 
@@ -200,11 +214,12 @@ def SpprCmdGetVersion():
     message = b'\x09'
     ser.write(message)
     data = ser.readline()
-    byte0 = int.from_bytes(data[0], byteorder='little')
-    byte1 = int.from_bytes(data[1], byteorder='little')
-    byte2 = int.from_bytes(data[2], byteorder='little')
-    byte3 = int.from_bytes(data[3], byteorder='little')
-    if data[4:] != ControlSumm(data[:-1]): print('Контрольная сумма неверна!')
+    byte0 = int.from_bytes(data[0:1], byteorder='little')
+    byte1 = int.from_bytes(data[1:2], byteorder='little')
+    byte2 = int.from_bytes(data[2:3], byteorder='little')
+    byte3 = int.from_bytes(data[3:4], byteorder='little')
+    if data[4:] != ControlSumm(data[:-1]):
+        print('Контрольная сумма неверна!')
 
 
 def SpprCmdCalibrate100():
@@ -216,62 +231,33 @@ def SpprCmdCalibrate200():
 
 
 def SpprCmdGetTemperature():
-    message = b'\xFB'
-    ser.write(message)
-    data = ser.readline()
-    byte0 = int.from_bytes(data[0:1], byteorder='little')
-    print(data[0:1], byte0)
-    byte1_2 = int.from_bytes(data[1:3], byteorder='little')
-    print(data[1:3], byte12)
-    byte3_4 = int.from_bytes(data[3:5], byteorder='little')
-    print(data[3:5], byte34)
-    byte5_6 = int.from_bytes(data[5:7], byteorder='little')
-    print(data[5:7], byte56)
-    byte7_8 = int.from_bytes(data[7:9], byteorder='little')
-    print(data[7:9], byte78)
-    byte9 = int.from_bytes(data[9:], byteorder='little')
-    print(data[9:], byte9)
-    if data[9:] != ControlSumm(data[:-1]): print('Контрольная сумма неверна!')
+    pass  # Не реализовано
+    # message = b'\xFB'
+    # ser.write(message)
+    # data = ser.readline()
+    # byte0 = int.from_bytes(data[0:1], byteorder='little')
+    # print(data[0:1], byte0)
+    # byte1_2 = int.from_bytes(data[1:3], byteorder='little')
+    # print(data[1:3], byte12)
+    # byte3_4 = int.from_bytes(data[3:5], byteorder='little')
+    # print(data[3:5], byte34)
+    # byte5_6 = int.from_bytes(data[5:7], byteorder='little')
+    # print(data[5:7], byte56)
+    # byte7_8 = int.from_bytes(data[7:9], byteorder='little')
+    # print(data[7:9], byte78)
+    # byte9 = int.from_bytes(data[9:], byteorder='little')
+    # print(data[9:], byte9)
+    # if data[9:] != ControlSumm(data[:-1]): print('Контрольная сумма неверна!')
 
 
 def SpprCmdGet():
-    """ Запросить текущие значения и выйти из режима
+    """ Запросить текущие значения
         Байт  Значение
         0  0xFD
         Ответ:
-        Если  прибор  не  находится  в  режиме  ответ  аналогичен  ответу   команды
+        Если  прибор  не  находится  в  режиме,  ответ  аналогичен  ответу   команды
     """
-    message = b'\xFD'
-    #print("Посылаю:", message)
-    ser.write(message)         
-    data = ser.readline()
-    #print("Получаю:", bytes(data), len(data))    
-    if len(data) == 4:
-        string = "Прибор не в режиме"
-        return string  
-    bite0 = int.from_bytes(bytes(data[0]), byteorder='little')       #режим
-    bite1 = binascii.hexlify(bytes(data[1])).decode('ASCII')         #байт-состояния
-    bite2_4 = int.from_bytes(bytes(data[2:5]), byteorder='little')
-    time1 = bite2_4/4096
-    string = (format(time1, '6.2f').replace('.', ',')) + ' '  #ВРЕМЯ
-    bite5_7 = int.from_bytes(data[5:8], byteorder='little')    #Импульсы тактов
-    bite8_10 =int.from_bytes(data[8:11], byteorder='little')   #импульсы с Входа2(МФ)
-    bite11_13 = int.from_bytes(data[11:14], byteorder='little')
-    bite17_19 = int.from_bytes(data[17:20], byteorder='little')
-    bite20_22 = int.from_bytes(data[20:23], byteorder='little')
-    bite23_25 = int.from_bytes(data[23:26], byteorder='little')
-    bite26_28 = int.from_bytes(data[26:29], byteorder='little')
-    bite29 = int.from_bytes(bytes(data[29]), byteorder='little')
-    if time1 == 0: time1=0.001    
-    F=bite8_10/time1
-    FMAX=1000    
-    GMAX=3.75
-    G=F*GMAX/FMAX
-    V=G/3.6*time1
-    G1=V/time1*3.6
-    string += (format(G1, '6.4f').replace('.', ',')) + ' '   #РАСХОД
-    string += (format(V, '6.4f').replace('.', ',')) + ' '   #ОБЪЕМ
-    return string
+    pass  #Не реализовано
 
 
 def SpprCmdGetAndReset():
@@ -310,41 +296,8 @@ def SpprCmdGetAndReset():
         14  Сумма
         Nимп – Оставшееся количество импу льсов
     """
-    message = b'\xFE'
-    #print("Посылаю:", message)
-    ser.write(message)         
-    data = ser.readline()
-    #print("Получаю:", bytes(data), len(data))
-    if len(data) == 4:
-        string = "Прибор не в режиме"
-        return string
-    #print(binascii.hexlify(bytes(data)).decode('ASCII'))
-    bite0 = int.from_bytes(bytes(data[0]), byteorder='little')       #режим
-    bite1 = binascii.hexlify(bytes(data[1])).decode('ASCII')         #байт-состояния
-    bite24 = int.from_bytes(data[2:5], byteorder='little')
-    time1 = bite24/4096
-    string = (format(time1, '6.2f').replace('.', ',')) + '|'  #ВРЕМЯ
-    bite57 = int.from_bytes(data[5:8], byteorder='little')    #Импульсы тактов
-    bite810 =int.from_bytes(data[8:11], byteorder='little')   #импульсы с Входа2(МФ)
-    bite1113 = int.from_bytes(data[11:14], byteorder='little')
-    bite1416 = int.from_bytes(data[16:17], byteorder='little')
-    bite1719 = int.from_bytes(data[17:20], byteorder='little')
-    bite2022 = int.from_bytes(data[20:23], byteorder='little')
-    bite2325 = int.from_bytes(data[23:26], byteorder='little')
-    bite2628 = int.from_bytes(data[26:29], byteorder='little')
-    bite29 = int.from_bytes(bytes(data[29]), byteorder='little')
+    pass  # Не реализовано
 
-
-    if time1 == 0: time1=0.001    
-    F=bite810/time1
-    FMAX=1000    
-    GMAX=3.75
-    G=F*GMAX/FMAX
-    V=G/3.6*time1
-    G1=V/time1*3.6
-    string += (format(G1, '6.4f').replace('.', ',')) + '|'   #РАСХОД
-    string += (format(V, '6.4f').replace('.', ',')) + ' '   #ОБЪЕМ
-    return string
 
 def SpprCmdGetQuality():
     ser.write(b'\xFC')         
@@ -372,12 +325,13 @@ def SpprSelfTest():
 
 
 def ControlSumm(message):
-    summ=0
+    summ = 0
     for byte in message[1:]:
         summ += byte
     a = summ.to_bytes(3, byteorder='little')
     return (a[0:1])
 
+# Подготовка КИ-2 к измерению. Выключение лазеров, включение лазеров, сброс счетчиков, выход из режима.
 def preparation():
     print(SpprCmdLaserOff())
     print(SpprCmdLaserOn())
@@ -385,21 +339,23 @@ def preparation():
     print(SpprCmdGetAndReset())
     print('Расходомер готов')
 
+
 def mesuring():    
     SpprCmdSS2Measure()
     oldget = 1
     while True:
-        get = Get()
-        if get != '  0,00 0,0000 0,0000 ':#уже не работает
-            if get == oldget:
-                print(GetAndRest(), 'finish')
+        newget = get()
+        if newget != '  0,00 0,0000 0,0000 ':  #уже не работает
+            if newget == oldget:
+                print(getandrest(), 'finish')
                 break
             print(get)
-            sys.stdout.write("\033[F") # Cursor up one line
+            sys.stdout.write("\033[F")  # Cursor up one line
             sys.stdout.write("\033[K")
-        oldget = get   
+        oldget = newget
         time.sleep(0.1)
     SpprCmdLaserOff()
+
 
 if __name__ == "__main__":
     preparation()
