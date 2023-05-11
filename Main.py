@@ -13,10 +13,10 @@ def command1():
     print(pyki2.test())
     message = (pyki2.test())
     app.entry2.delete(0, 10)
-    string1 = message[1], message[3]
+    string1 = str(message[1]) + ' ' + str(message[3])
     app.entry2.insert(1, string1)
     app.entry3.delete(0, 10)
-    string2 = message[4], message[10]
+    string2 = str(message[4]) + ' ' + str(message[10])
     app.entry3.insert(1, string2)
 
 
@@ -24,10 +24,10 @@ def command3():
     print(pyki2.test())
     message = (pyki2.test())
     app.entry2.delete(0, 10)
-    string1 = message[11], message[6]
+    string1 = str(message[11]) + ' ' + str(message[6])
     app.entry2.insert(1, string1)
     app.entry3.delete(0, 10)
-    string2 = message[2], message[11]
+    string2 = str(message[2]) + ' ' + str(message[11])
     app.entry3.insert(1, string2)
 
 
